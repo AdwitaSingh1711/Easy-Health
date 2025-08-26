@@ -1,5 +1,5 @@
 // src/services/api.js
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'; // Adjust this to match your backend URL
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
 class ApiService {
   async request(endpoint, options = {}) {
@@ -55,6 +55,28 @@ class ApiService {
   // Health check
   async healthCheck() {
     return this.request('/health');
+  }
+
+  // Appointment endpoints
+  async bookAppointment(appointmentData) {
+    return this.request('/appointments/book', {
+      method: 'POST',
+      body: JSON.stringify(appointmentData),
+    });
+  }
+
+  async getMyAppointments() {
+    return this.request('/appointments/my-appointments');
+  }
+
+  async cancelAppointment(appointmentId) {
+    return this.request(`/appointments/${appointmentId}/cancel`, {
+      method: 'PUT',
+    });
+  }
+
+  async getAvailableSlots(doctorId, date) {
+    return this.request(`/appointments/available-slots/${doctorId}?date=${date}`);
   }
 }
 
