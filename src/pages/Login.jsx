@@ -2,26 +2,41 @@
 import React, { useState, useContext, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AppContext } from '../context/AppContext'
+import { assets } from '../assets/assets'
 
 const Login = () => {
   const navigate = useNavigate()
-  const { login, register, isAuthenticated, loading } = useContext(AppContext)
+  const { login, register, isAuthenticated, loading, user } = useContext(AppContext)
 
   const [state, setState] = useState('Sign Up')
+  const [userType, setUserType] = useState('patient') // 'patient' or 'doctor'
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [phone, setPhone] = useState('')
-  const [role, setRole] = useState('patient') // Default to patient
+  const [speciality, setSpeciality] = useState('General physician')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
 
-  // Redirect if already authenticated
+  const specialities = [
+    'General physician',
+    'Gynecologist', 
+    'Dermatologist',
+    'Pediatricians',
+    'Neurologist',
+    'Gastroenterologist'
+  ]
+
+  // Redirect based on user role after authentication
   useEffect(() => {
-    if (!loading && isAuthenticated) {
-      navigate('/')
+    if (!loading && isAuthenticated && user) {
+      if (user.role === 'provider') {
+        navigate('/dashboard') // Doctor dashboard
+      } else {
+        navigate('/') // Patient home
+      }
     }
-  }, [isAuthenticated, loading, navigate])
+  }, [isAuthenticated, loading, navigate, user])
 
   const onSubmitHandler = async (event) => {
     event.preventDefault();
@@ -31,16 +46,23 @@ const Login = () => {
     try {
       if (state === 'Sign Up') {
         // Registration
-        const result = await register({
+        const userData = {
           name,
           email,
           password,
           phone: phone || undefined,
-          role
-        });
+          role: userType === 'doctor' ? 'provider' : 'patient'
+        }
+
+        // Add speciality for doctors
+        if (userType === 'doctor') {
+          userData.speciality = speciality
+        }
+
+        const result = await register(userData);
 
         if (result.success) {
-          navigate('/') // Redirect to home after successful registration
+          // Navigation will be handled by useEffect based on user role
         } else {
           setError(result.error)
         }
@@ -49,7 +71,7 @@ const Login = () => {
         const result = await login(email, password);
 
         if (result.success) {
-          navigate('/') // Redirect to home after successful login
+          // Navigation will be handled by useEffect based on user role
         } else {
           setError(result.error)
         }
@@ -66,7 +88,8 @@ const Login = () => {
     setEmail('')
     setPassword('')
     setPhone('')
-    setRole('patient')
+    setSpeciality('General physician')
+    setUserType('patient')
     setError('')
   }
 
@@ -87,102 +110,239 @@ const Login = () => {
   }
 
   return (
-    <form onSubmit={onSubmitHandler} className='min-h-[80vh] flex items-center'>
-      <div className='flex flex-col gap-3 m-auto items-start p-8 min-w-[340px] sm:min-w-96 border rounded-xl text-zinc-600 text-sm shadow-lg'>
-        <p className='text-2xl font-semibold'>{state === 'Sign Up' ? 'Create Account' : 'Login'}</p>
-        <p>Please {state === 'Sign Up' ? 'sign up' : 'log in'} to book appointment</p>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div className="text-center">
+          <img 
+            className="mx-auto h-12 w-auto" 
+            src={assets.logo} 
+            alt="EasyHealth" 
+          />
+          <h2 className="mt-6 text-3xl font-bold text-gray-900">
+            {state === 'Sign Up' ? 'Create your account' : 'Sign in to your account'}
+          </h2>
+          <p className="mt-2 text-sm text-gray-600">
+            {state === 'Sign Up' 
+              ? 'Join EasyHealth as a patient or healthcare provider'
+              : 'Access your EasyHealth dashboard'
+            }
+          </p>
+        </div>
 
-        {error && (
-          <div className="w-full p-3 bg-red-50 border border-red-200 rounded-md">
-            <p className="text-red-600 text-sm">{error}</p>
-          </div>
-        )}
+        <form className="mt-8 space-y-6" onSubmit={onSubmitHandler}>
+          <div className="bg-white shadow-lg rounded-lg px-6 py-8 space-y-6">
+            
+            {/* User Type Selection */}
+            <div>
+              <label className="text-base font-medium text-gray-900">
+                {state === 'Sign Up' ? 'I am a:' : 'Sign in as:'}
+              </label>
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setUserType('patient')}
+                  className={`${
+                    userType === 'patient'
+                      ? 'bg-primary text-white border-primary'
+                      : 'bg-white text-gray-900 border-gray-200 hover:bg-gray-50'
+                  } relative flex items-center justify-center px-4 py-3 text-sm font-medium border rounded-md transition-colors`}
+                >
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  Patient
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUserType('doctor')}
+                  className={`${
+                    userType === 'doctor'
+                      ? 'bg-primary text-white border-primary'
+                      : 'bg-white text-gray-900 border-gray-200 hover:bg-gray-50'
+                  } relative flex items-center justify-center px-4 py-3 text-sm font-medium border rounded-md transition-colors`}
+                >
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Doctor
+                </button>
+              </div>
+            </div>
 
-        {state === 'Sign Up' && (
-          <>
-            <div className='w-full'>
-              <p>Full Name</p>
-              <input 
-                onChange={(e) => setName(e.target.value)} 
-                value={name} 
-                className='border border-zinc-300 rounded w-full p-2 mt-1' 
-                type="text" 
-                required 
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-md p-4">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm text-red-600">{error}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {state === 'Sign Up' && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Full Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary"
+                    placeholder="Enter your full name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    disabled={isSubmitting}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Phone Number (Optional)
+                  </label>
+                  <input
+                    type="tel"
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary"
+                    placeholder="Enter your phone number"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    disabled={isSubmitting}
+                  />
+                </div>
+
+                {userType === 'doctor' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Medical Speciality
+                    </label>
+                    <select
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                      value={speciality}
+                      onChange={(e) => setSpeciality(e.target.value)}
+                      disabled={isSubmitting}
+                    >
+                      {specialities.map((spec) => (
+                        <option key={spec} value={spec}>{spec}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </>
+            )}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Email Address
+              </label>
+              <input
+                type="email"
+                required
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary"
+                placeholder="Enter your email address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 disabled={isSubmitting}
               />
             </div>
 
-            <div className='w-full'>
-              <p>Phone (Optional)</p>
-              <input 
-                onChange={(e) => setPhone(e.target.value)} 
-                value={phone} 
-                className='border border-zinc-300 rounded w-full p-2 mt-1' 
-                type="tel" 
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Password
+              </label>
+              <input
+                type="password"
+                required
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 disabled={isSubmitting}
               />
             </div>
 
-            <div className='w-full'>
-              <p>Role</p>
-              <select
-                onChange={(e) => setRole(e.target.value)}
-                value={role}
-                className='border border-zinc-300 rounded w-full p-2 mt-1'
+            <div>
+              <button
+                type="submit"
                 disabled={isSubmitting}
+                className={`group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white transition-colors ${
+                  isSubmitting
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary'
+                }`}
               >
-                <option value="patient">Patient</option>
-                <option value="provider">Healthcare Provider</option>
-              </select>
+                {isSubmitting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    {state === 'Sign Up' ? 'Creating Account...' : 'Signing In...'}
+                  </>
+                ) : (
+                  <>
+                    {state === 'Sign Up' ? 'Create Account' : 'Sign In'}
+                  </>
+                )}
+              </button>
             </div>
-          </>
-        )}
 
-        <div className='w-full'>
-          <p>Email</p>
-          <input 
-            onChange={(e) => setEmail(e.target.value)} 
-            value={email} 
-            className='border border-zinc-300 rounded w-full p-2 mt-1' 
-            type="email" 
-            required 
-            disabled={isSubmitting}
-          />
+            <div className="text-center">
+              {state === 'Sign Up' ? (
+                <p className="text-sm text-gray-600">
+                  Already have an account?{' '}
+                  <button
+                    type="button"
+                    onClick={() => switchState('Login')}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    Sign in here
+                  </button>
+                </p>
+              ) : (
+                <p className="text-sm text-gray-600">
+                  Don't have an account?{' '}
+                  <button
+                    type="button"
+                    onClick={() => switchState('Sign Up')}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    Create one here
+                  </button>
+                </p>
+              )}
+            </div>
+          </div>
+        </form>
+
+        {/* Feature highlights */}
+        <div className="text-center">
+          <div className="grid grid-cols-2 gap-4 mt-8">
+            <div className="flex items-center justify-center p-4 bg-white rounded-lg shadow-sm">
+              <svg className="w-8 h-8 text-primary mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+              <div className="text-left">
+                <p className="text-sm font-medium text-gray-900">Secure</p>
+                <p className="text-xs text-gray-500">End-to-end encrypted</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-center p-4 bg-white rounded-lg shadow-sm">
+              <svg className="w-8 h-8 text-primary mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              <div className="text-left">
+                <p className="text-sm font-medium text-gray-900">Fast</p>
+                <p className="text-xs text-gray-500">Quick appointments</p>
+              </div>
+            </div>
+          </div>
         </div>
-
-        <div className='w-full'>
-          <p>Password</p>
-          <input 
-            onChange={(e) => setPassword(e.target.value)} 
-            value={password} 
-            className='border border-zinc-300 rounded w-full p-2 mt-1' 
-            type="password" 
-            required 
-            disabled={isSubmitting}
-          />
-        </div>
-
-        <button 
-          type="submit"
-          disabled={isSubmitting}
-          className={`w-full py-2 rounded-md text-base text-white transition-colors ${
-            isSubmitting 
-              ? 'bg-gray-400 cursor-not-allowed' 
-              : 'bg-primary hover:bg-primary/90'
-          }`}
-        >
-          {isSubmitting 
-            ? (state === 'Sign Up' ? 'Creating account...' : 'Logging in...') 
-            : (state === 'Sign Up' ? 'Create account' : 'Login')
-          }
-        </button>
-
-        {state === 'Sign Up'
-          ? <p>Already have an account? <span onClick={() => switchState('Login')} className='text-primary underline cursor-pointer'>Login here</span></p>
-          : <p>Create a new account? <span onClick={() => switchState('Sign Up')} className='text-primary underline cursor-pointer'>Click here</span></p>
-        }
       </div>
-    </form>
+    </div>
   )
 }
 

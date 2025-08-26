@@ -1,7 +1,7 @@
 // src/pages/MyProfile.jsx
 import React, { useState, useContext, useEffect } from 'react'
-import { assets } from '../assets/assets'
-import { AppContext } from '../context/AppContext'
+import { assets } from '../../assets/assets'
+import { AppContext } from '../../context/AppContext'
 
 const MyProfile = () => {
     const { user } = useContext(AppContext)

@@ -1,10 +1,10 @@
-// src/components/Navbar.jsx
+// src/components/patient/Navbar.jsx
 import React, { useState, useContext } from 'react'
-import { assets } from '../assets/assets'
+import { assets } from '../../assets/assets'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { AppContext } from '../context/AppContext'
+import { AppContext } from '../../context/AppContext'
 
-const Navbar = () => {
+const PatientNavbar = () => {
   const navigate = useNavigate()
   const { user, isAuthenticated, logout } = useContext(AppContext)
 
@@ -99,4 +99,4 @@ const Navbar = () => {
   )
 }
 
-export default Navbar
+export default PatientNavbar

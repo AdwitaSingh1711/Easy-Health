@@ -1,7 +1,7 @@
 // src/pages/MyAppointments.jsx
 import React, { useContext, useState, useEffect } from 'react'
-import { AppContext } from '../context/AppContext'
-import { apiService } from '../services/api'
+import { AppContext } from '../../context/AppContext'
+import { apiService } from '../../services/api'
 import { useNavigate } from 'react-router-dom'
 
 const MyAppointments = () => {
