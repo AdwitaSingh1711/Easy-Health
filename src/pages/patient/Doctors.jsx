@@ -58,9 +58,17 @@ const Doctors = () => {
     <div className="px-4 sm:px-6 lg:px-12 py-6">
       {/* Title */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-        <p className="text-2xl md:text-3xl font-bold text-gray-800">
-          Browse through the <span className="text-indigo-600">doctor specialists</span>
-        </p>
+        <div>
+          <p className="text-2xl md:text-3xl font-bold text-gray-800">
+            Browse through the <span className="text-indigo-600">doctor specialists</span>
+          </p>
+          <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-700">
+              <span className="font-medium">💡 Note:</span> Doctors marked as "Demo" are sample profiles for demonstration. 
+              Real registered doctors can accept actual bookings.
+            </p>
+          </div>
+        </div>
 
         {/* Dropdown filter */}
         <div className="relative w-52">
@@ -152,6 +160,11 @@ const Doctors = () => {
                 <div className="flex justify-center items-center gap-2 text-green-600 text-sm mb-2">
                   <span className="w-2 h-2 bg-green-500 rounded-full"></span> 
                   <p>Available</p>
+                  {!item.isReal && (
+                    <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-600 text-xs rounded-full">
+                      Demo
+                    </span>
+                  )}
                 </div>
                 <p className="text-lg font-semibold text-gray-800">{item.name}</p>
                 <p className="text-sm text-gray-500 mb-1">{item.speciality}</p>
@@ -173,7 +186,7 @@ const Doctors = () => {
                   }}
                   className="w-full mt-4 px-5 py-2 bg-indigo-600 text-white text-sm rounded-full hover:bg-indigo-700 transition-all"
                 >
-                  Book Appointment
+                  {item.isReal ? 'Book Appointment' : 'Try Demo Booking'}
                 </button>
               </div>
             </div>

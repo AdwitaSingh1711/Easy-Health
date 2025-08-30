@@ -29,6 +29,12 @@ const Appointment = () => {
     const getAvailableSlots = async () => {
         if (!docInfo) return;
         
+        // If this is a dummy doctor, generate mock slots
+        if (!docInfo.isReal) {
+            generateMockSlots();
+            return;
+        }
+        
         try {
             setDocSlots([])
             let today = new Date()
@@ -61,6 +67,38 @@ const Appointment = () => {
         }
     }
 
+    // Generate mock slots for dummy doctors
+    const generateMockSlots = () => {
+        setDocSlots([])
+        let today = new Date()
+        for (let i = 0; i < 7; i++) {
+            let currentDate = new Date(today)
+            currentDate.setDate(today.getDate() + i)
+            let endTime = new Date()
+            endTime.setDate(today.getDate() + i)
+            endTime.setHours(21, 0, 0, 0)
+
+            if (today.getDate() === currentDate.getDate()) {
+                currentDate.setHours(currentDate.getHours() > 10 ? currentDate.getHours() + 1 : 10)
+                currentDate.setMinutes(currentDate.getMinutes() > 30 ? 30 : 0)
+            } else {
+                currentDate.setHours(10)
+                currentDate.setMinutes(0)
+            }
+
+            let timeSlots = []
+            while (currentDate < endTime) {
+                let formattedTime = currentDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                timeSlots.push({
+                    datetime: new Date(currentDate),
+                    time: formattedTime
+                })
+                currentDate.setMinutes(currentDate.getMinutes() + 30)
+            }
+            setDocSlots(prev => ([...prev, timeSlots]))
+        }
+    }
+
     const bookAppointment = async () => {
         if (!isAuthenticated) {
             navigate('/login')
@@ -77,6 +115,22 @@ const Appointment = () => {
         setBookingMessage('')
 
         try {
+            // If this is a dummy doctor, show demo message
+            if (!docInfo.isReal) {
+                setBookingMessage('Demo booking successful! This is a demo doctor. In real implementation, this would book an actual appointment.')
+                
+                // Reset selections
+                setSlotTime('')
+                setSlotIndex(0)
+                setReason('')
+                
+                setTimeout(() => {
+                    setBookingMessage('')
+                }, 5000)
+                
+                return
+            }
+
             // Find the selected slot
             const selectedSlot = docSlots[slotIndex].find(slot => slot.time === slotTime)
             if (!selectedSlot) {

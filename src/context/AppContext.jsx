@@ -91,7 +91,7 @@ const AppContextProvider = (props) => {
         return age;
     };
 
-    // Fetch doctors/providers from the backend
+    // Fetch doctors/providers from the backend and combine with dummy data
     const fetchDoctors = async () => {
         try {
             const response = await apiService.getProviders();
@@ -114,15 +114,42 @@ const AppContextProvider = (props) => {
                     line1: '123 Medical Center',
                     line2: 'Healthcare District'
                 },
-                available: true
+                available: true,
+                isReal: true // Flag to identify real doctors
             }));
             
-            setDoctors(transformedDoctors);
+            // Import dummy doctors from assets
+            const { doctors: dummyDoctors } = await import("../assets/assets");
+            
+            // Add isReal flag to dummy doctors and ensure unique IDs
+            const flaggedDummyDoctors = dummyDoctors.map((doc, index) => ({
+                ...doc,
+                _id: doc._id || `dummy_${index}`, // Ensure unique ID
+                isReal: false // Flag to identify dummy doctors
+            }));
+            
+            // Combine real doctors with dummy doctors (real doctors first)
+            const combinedDoctors = [...transformedDoctors, ...flaggedDummyDoctors];
+            
+            setDoctors(combinedDoctors);
         } catch (error) {
             console.error('Failed to fetch doctors:', error);
-            toast.error('Failed to load doctors');
-            // Keep empty array if fetch fails
-            setDoctors([]);
+            
+            // If API fails, still show dummy doctors
+            try {
+                const { doctors: dummyDoctors } = await import("../assets/assets");
+                const flaggedDummyDoctors = dummyDoctors.map((doc, index) => ({
+                    ...doc,
+                    _id: doc._id || `dummy_${index}`,
+                    isReal: false
+                }));
+                setDoctors(flaggedDummyDoctors);
+                toast.warning('Showing demo doctors. Real doctors could not be loaded.');
+            } catch (importError) {
+                console.error('Failed to load dummy doctors:', importError);
+                setDoctors([]);
+                toast.error('Failed to load doctors');
+            }
         }
     };
 
