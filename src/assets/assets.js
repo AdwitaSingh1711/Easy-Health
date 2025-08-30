@@ -15,6 +15,18 @@ import info_icon from './info_icon.svg'
 import upload_icon from './upload_icon.png'
 import stripe_logo from './stripe_logo.png'
 import razorpay_logo from './razorpay_logo.png'
+
+// Doctor dashboard icons
+import earning_icon from './earning_icon.svg'
+import appointments_icon from './appointments_icon.svg'
+import patients_icon from './patients_icon.svg'
+import list_icon from './list_icon.svg'
+
+// Doctor appointment action icons
+import cancel_icon from './cancel_icon.svg'
+import tick_icon from './tick_icon.svg'
+
+// Doctor profile images
 import doc1 from './doc1.png'
 import doc2 from './doc2.png'
 import doc3 from './doc3.png'
@@ -30,13 +42,14 @@ import doc12 from './doc12.png'
 import doc13 from './doc13.png'
 import doc14 from './doc14.png'
 import doc15 from './doc15.png'
+
+// Specialty icons
 import Dermatologist from './Dermatologist.svg'
 import Gastroenterologist from './Gastroenterologist.svg'
 import General_physician from './General_physician.svg'
 import Gynecologist from './Gynecologist.svg'
 import Neurologist from './Neurologist.svg'
 import Pediatricians from './Pediatricians.svg'
-
 
 export const assets = {
     appointment_img,
@@ -55,7 +68,17 @@ export const assets = {
     dropdown_icon,
     upload_icon,
     stripe_logo,
-    razorpay_logo
+    razorpay_logo,
+    
+    // Doctor dashboard icons
+    earning_icon,
+    appointments_icon,
+    patients_icon,
+    list_icon,
+    
+    // Doctor appointment action icons
+    cancel_icon,
+    tick_icon
 }
 
 export const specialityData = [
