@@ -57,6 +57,15 @@ class ApiService {
     return this.request('/health');
   }
 
+  // Provider endpoints
+  async getProviders() {
+    return this.request('/appointments/providers');
+  }
+
+  async getAvailableSlots(providerId, date) {
+    return this.request(`/appointments/available-slots/${providerId}?date=${date}`);
+  }
+
   // Appointment endpoints
   async bookAppointment(appointmentData) {
     return this.request('/appointments/book', {
@@ -73,10 +82,6 @@ class ApiService {
     return this.request(`/appointments/${appointmentId}/cancel`, {
       method: 'PUT',
     });
-  }
-
-  async getAvailableSlots(doctorId, date) {
-    return this.request(`/appointments/available-slots/${doctorId}?date=${date}`);
   }
 }
 

@@ -1,10 +1,9 @@
 // src/context/AppContext.jsx
 import { createContext, useState, useEffect } from "react";
-import { doctors } from "../assets/assets";
 import { apiService } from "../services/api";
-import { toast } from 'react-toastify'
+import { toast } from 'react-toastify';
 
-export const AppContext = createContext()
+export const AppContext = createContext();
 
 // Mock doctor dashboard data for providers
 const mockDoctorDashboard = {
@@ -64,32 +63,68 @@ const AppContextProvider = (props) => {
     const [user, setUser] = useState(null);
     const [token, setToken] = useState(localStorage.getItem('authToken'));
     const [loading, setLoading] = useState(true);
+    const [doctors, setDoctors] = useState([]);
     
     // Doctor-specific state (for providers)
     const [doctorAppointments, setDoctorAppointments] = useState(mockDoctorDashboard.latestAppointments);
     const [dashData, setDashData] = useState(mockDoctorDashboard);
     const [profileData, setProfileData] = useState(mockDoctorProfile);
 
-    const currencySymbol = '$'
+    const currencySymbol = '$';
 
-    // Utility functions for date formatting (used by both patient and doctor views)
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    // Utility functions for date formatting
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
     const slotDateFormat = (slotDate) => {
-        const dateArray = slotDate.split('_')
-        return dateArray[0] + " " + months[Number(dateArray[1]) - 1] + " " + dateArray[2]
-    }
+        const dateArray = slotDate.split('_');
+        return dateArray[0] + " " + months[Number(dateArray[1]) - 1] + " " + dateArray[2];
+    };
 
     const calculateAge = (dob) => {
-        const today = new Date()
-        const birthDate = new Date(dob)
-        let age = today.getFullYear() - birthDate.getFullYear()
-        const monthDiff = today.getMonth() - birthDate.getMonth()
+        const today = new Date();
+        const birthDate = new Date(dob);
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
         if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-            age--
+            age--;
         }
-        return age
-    }
+        return age;
+    };
+
+    // Fetch doctors/providers from the backend
+    const fetchDoctors = async () => {
+        try {
+            const response = await apiService.getProviders();
+            
+            // Transform the provider data to match the existing doctor format
+            const transformedDoctors = response.providers.map(provider => ({
+                _id: provider.id,
+                name: provider.name,
+                email: provider.email,
+                speciality: provider.speciality,
+                description: provider.description,
+                experience: provider.experience,
+                fees: provider.appointmentFee,
+                // Add default image if not provided
+                image: `https://via.placeholder.com/300/4F46E5/FFFFFF?Text=${encodeURIComponent(provider.name.substring(0, 2))}`,
+                // Add default about text
+                about: provider.description || `${provider.name} specializes in ${provider.speciality} with ${provider.experience} of experience.`,
+                degree: 'MBBS', // Default degree
+                address: {
+                    line1: '123 Medical Center',
+                    line2: 'Healthcare District'
+                },
+                available: true
+            }));
+            
+            setDoctors(transformedDoctors);
+        } catch (error) {
+            console.error('Failed to fetch doctors:', error);
+            toast.error('Failed to load doctors');
+            // Keep empty array if fetch fails
+            setDoctors([]);
+        }
+    };
 
     // Check if user is authenticated on app load
     useEffect(() => {
@@ -120,6 +155,11 @@ const AppContextProvider = (props) => {
         };
 
         checkAuth();
+    }, []);
+
+    // Fetch doctors when component mounts
+    useEffect(() => {
+        fetchDoctors();
     }, []);
 
     const login = async (email, password) => {
@@ -162,6 +202,8 @@ const AppContextProvider = (props) => {
             if (loginResult.success) {
                 if (userData.role === 'provider') {
                     toast.success('Doctor account created successfully!');
+                    // Refresh the doctors list to include the new provider
+                    fetchDoctors();
                 } else {
                     toast.success('Patient account created successfully!');
                 }
@@ -242,6 +284,7 @@ const AppContextProvider = (props) => {
         register,
         logout,
         isAuthenticated: !!token,
+        fetchDoctors, // Expose this so components can refresh the doctors list
         
         // Utility functions
         slotDateFormat,
@@ -260,13 +303,13 @@ const AppContextProvider = (props) => {
         cancelAppointment,
         completeAppointment,
         updateDoctorProfile,
-    }
+    };
 
     return (
         <AppContext.Provider value={value}>
             {props.children}
         </AppContext.Provider>
-    )
-}
+    );
+};
 
-export default AppContextProvider
+export default AppContextProvider;

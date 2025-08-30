@@ -15,6 +15,9 @@ const Login = () => {
   const [password, setPassword] = useState('')
   const [phone, setPhone] = useState('')
   const [speciality, setSpeciality] = useState('General physician')
+  const [experience, setExperience] = useState('1 Years')
+  const [description, setDescription] = useState('')
+  const [appointmentFee, setAppointmentFee] = useState(50)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
 
@@ -25,6 +28,16 @@ const Login = () => {
     'Pediatricians',
     'Neurologist',
     'Gastroenterologist'
+  ]
+
+  const experienceOptions = [
+    '1 Years',
+    '2 Years',
+    '3 Years',
+    '4 Years',
+    '5 Years',
+    '6-10 Years',
+    '10+ Years'
   ]
 
   // Redirect based on user role after authentication
@@ -54,9 +67,12 @@ const Login = () => {
           role: userType === 'doctor' ? 'provider' : 'patient'
         }
 
-        // Add speciality for doctors
+        // Add provider-specific fields for doctors
         if (userType === 'doctor') {
           userData.speciality = speciality
+          userData.experience = experience
+          userData.description = description.trim() || `${name} is a qualified ${speciality} with ${experience} of experience.`
+          userData.appointmentFee = parseFloat(appointmentFee)
         }
 
         const result = await register(userData);
@@ -89,6 +105,9 @@ const Login = () => {
     setPassword('')
     setPhone('')
     setSpeciality('General physician')
+    setExperience('1 Years')
+    setDescription('')
+    setAppointmentFee(50)
     setUserType('patient')
     setError('')
   }
@@ -218,21 +237,73 @@ const Login = () => {
                 </div>
 
                 {userType === 'doctor' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Medical Speciality
-                    </label>
-                    <select
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-                      value={speciality}
-                      onChange={(e) => setSpeciality(e.target.value)}
-                      disabled={isSubmitting}
-                    >
-                      {specialities.map((spec) => (
-                        <option key={spec} value={spec}>{spec}</option>
-                      ))}
-                    </select>
-                  </div>
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Medical Speciality
+                        </label>
+                        <select
+                          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                          value={speciality}
+                          onChange={(e) => setSpeciality(e.target.value)}
+                          disabled={isSubmitting}
+                        >
+                          {specialities.map((spec) => (
+                            <option key={spec} value={spec}>{spec}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Experience
+                        </label>
+                        <select
+                          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                          value={experience}
+                          onChange={(e) => setExperience(e.target.value)}
+                          disabled={isSubmitting}
+                        >
+                          {experienceOptions.map((exp) => (
+                            <option key={exp} value={exp}>{exp}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Description (Optional)
+                      </label>
+                      <textarea
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary"
+                        placeholder="Brief description about your practice and expertise..."
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        disabled={isSubmitting}
+                        rows={3}
+                        maxLength={500}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">{description.length}/500 characters</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Appointment Fee ($)
+                      </label>
+                      <input
+                        type="number"
+                        min="10"
+                        max="500"
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary"
+                        placeholder="50"
+                        value={appointmentFee}
+                        onChange={(e) => setAppointmentFee(e.target.value)}
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                  </>
                 )}
               </>
             )}
