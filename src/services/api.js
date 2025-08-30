@@ -66,6 +66,18 @@ class ApiService {
     return this.request(`/appointments/available-slots/${providerId}?date=${date}`);
   }
 
+  // Provider Profile endpoints (for doctors)
+  async getProviderProfile() {
+    return this.request('/appointments/provider-profile');
+  }
+
+  async updateProviderProfile(profileData) {
+    return this.request('/appointments/provider-profile', {
+      method: 'PUT',
+      body: JSON.stringify(profileData),
+    });
+  }
+
   // Appointment endpoints
   async bookAppointment(appointmentData) {
     return this.request('/appointments/book', {

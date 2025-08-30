@@ -42,6 +42,7 @@ const mockDoctorDashboard = {
   ]
 };
 
+// Default mock profile for fallback
 const mockDoctorProfile = {
   _id: '1',
   name: 'Dr. John Smith',
@@ -69,6 +70,7 @@ const AppContextProvider = (props) => {
     const [doctorAppointments, setDoctorAppointments] = useState(mockDoctorDashboard.latestAppointments);
     const [dashData, setDashData] = useState(mockDoctorDashboard);
     const [profileData, setProfileData] = useState(mockDoctorProfile);
+    const [profileLoading, setProfileLoading] = useState(false);
 
     const currencySymbol = '$';
 
@@ -153,6 +155,30 @@ const AppContextProvider = (props) => {
         }
     };
 
+    // Fetch provider profile from API
+    const fetchProviderProfile = async () => {
+        if (!user || user.role !== 'provider') return;
+        
+        setProfileLoading(true);
+        try {
+            const response = await apiService.getProviderProfile();
+            setProfileData(response.profile);
+        } catch (error) {
+            console.error('Failed to fetch provider profile:', error);
+            toast.error('Failed to load profile data');
+            
+            // Keep using mock data with user info if API fails
+            setProfileData(prev => ({
+                ...prev,
+                name: user.name,
+                email: user.email,
+                speciality: user.speciality || prev.speciality
+            }));
+        } finally {
+            setProfileLoading(false);
+        }
+    };
+
     // Check if user is authenticated on app load
     useEffect(() => {
         const checkAuth = async () => {
@@ -163,14 +189,10 @@ const AppContextProvider = (props) => {
                     setUser(userData);
                     setToken(storedToken);
                     
-                    // Update doctor profile if user is a provider
+                    // Fetch provider profile if user is a provider
                     if (userData.role === 'provider') {
-                        setProfileData(prev => ({
-                            ...prev,
-                            name: userData.name,
-                            email: userData.email,
-                            speciality: userData.speciality || prev.speciality
-                        }));
+                        // We'll fetch the profile data in a separate effect
+                        // to avoid race conditions
                     }
                 } catch (error) {
                     console.error('Auth check failed:', error);
@@ -183,6 +205,13 @@ const AppContextProvider = (props) => {
 
         checkAuth();
     }, []);
+
+    // Fetch provider profile when user is set and is a provider
+    useEffect(() => {
+        if (user && user.role === 'provider') {
+            fetchProviderProfile();
+        }
+    }, [user]);
 
     // Fetch doctors when component mounts
     useEffect(() => {
@@ -197,14 +226,8 @@ const AppContextProvider = (props) => {
             setToken(response.token);
             setUser(response.user);
             
-            // Update doctor profile if user is a provider
+            // Provider profile will be fetched automatically via useEffect
             if (response.user.role === 'provider') {
-                setProfileData(prev => ({
-                    ...prev,
-                    name: response.user.name,
-                    email: response.user.email,
-                    speciality: response.user.speciality || prev.speciality
-                }));
                 toast.success(`Welcome back, Dr. ${response.user.name}!`);
             } else {
                 toast.success(`Welcome back, ${response.user.name}!`);
@@ -268,7 +291,8 @@ const AppContextProvider = (props) => {
     };
 
     const getDoctorProfile = () => {
-        console.log('Doctor profile loaded');
+        // Refetch profile from API
+        fetchProviderProfile();
     };
 
     const cancelAppointment = (appointmentId) => {
@@ -295,9 +319,20 @@ const AppContextProvider = (props) => {
         toast.success('Appointment marked as completed');
     };
 
-    const updateDoctorProfile = (updatedData) => {
-        setProfileData(prev => ({ ...prev, ...updatedData }));
-        toast.success('Profile updated successfully');
+    const updateDoctorProfile = async (updatedData) => {
+        try {
+            setProfileLoading(true);
+            const response = await apiService.updateProviderProfile(updatedData);
+            setProfileData(response.profile);
+            toast.success('Profile updated successfully');
+            return { success: true };
+        } catch (error) {
+            console.error('Failed to update profile:', error);
+            toast.error(error.message || 'Failed to update profile');
+            return { success: false, error: error.message };
+        } finally {
+            setProfileLoading(false);
+        }
     };
 
     const value = {
@@ -323,6 +358,7 @@ const AppContextProvider = (props) => {
         appointments: doctorAppointments,
         dashData,
         profileData,
+        profileLoading,
         setProfileData,
         getDoctorAppointments,
         getDashData,
@@ -330,6 +366,7 @@ const AppContextProvider = (props) => {
         cancelAppointment,
         completeAppointment,
         updateDoctorProfile,
+        fetchProviderProfile, // Expose for manual refresh
     };
 
     return (
