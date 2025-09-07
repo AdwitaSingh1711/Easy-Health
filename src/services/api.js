@@ -1,5 +1,5 @@
 // src/services/api.js
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
 class ApiService {
   async request(endpoint, options = {}) {
@@ -94,6 +94,59 @@ class ApiService {
     return this.request(`/appointments/${appointmentId}/cancel`, {
       method: 'PUT',
     });
+  }
+
+  // Document endpoints
+  async requestDocumentUpload(fileInfo) {
+    return this.request('/documents/upload-request', {
+      method: 'POST',
+      body: JSON.stringify(fileInfo),
+    });
+  }
+
+  async confirmDocumentUpload(documentId) {
+    return this.request(`/documents/${documentId}/confirm`, {
+      method: 'POST',
+    });
+  }
+
+  async getMyDocuments() {
+    return this.request('/documents/my-documents');
+  }
+
+  async getDocumentDownloadUrl(documentId) {
+    return this.request(`/documents/${documentId}/download`);
+  }
+
+  // Upload file directly to Azure using presigned URL
+  async uploadFileToAzure(uploadUrl, file) {
+    try {
+      console.log('Uploading file to Azure:', uploadUrl);
+      
+      const response = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: {
+          'x-ms-blob-type': 'BlockBlob',
+          'Content-Type': file.type,
+          'Content-Length': file.size.toString(),
+        },
+        body: file,
+      });
+
+      console.log('Azure upload response:', response.status, response.statusText);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Azure upload error:', errorText);
+        throw new Error(`Failed to upload file to Azure: ${response.status} ${response.statusText}`);
+      }
+
+      console.log('File uploaded successfully to Azure');
+      return response;
+    } catch (error) {
+      console.error('Azure upload error:', error);
+      throw error;
+    }
   }
 }
 

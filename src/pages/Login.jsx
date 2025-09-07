@@ -14,10 +14,18 @@ const Login = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [phone, setPhone] = useState('')
+  
+  // Patient-specific fields
+  const [age, setAge] = useState('')
+  const [gender, setGender] = useState('')
+  const [address, setAddress] = useState('')
+  
+  // Provider-specific fields
   const [speciality, setSpeciality] = useState('General physician')
   const [experience, setExperience] = useState('1 Years')
   const [description, setDescription] = useState('')
   const [appointmentFee, setAppointmentFee] = useState(50)
+  
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
 
@@ -67,6 +75,26 @@ const Login = () => {
           role: userType === 'doctor' ? 'provider' : 'patient'
         }
 
+        // Add patient-specific fields for patients
+        if (userType === 'patient') {
+          if (!age || !gender) {
+            setError('Please provide age and gender for patient registration')
+            setIsSubmitting(false)
+            return
+          }
+          
+          const ageNum = parseInt(age)
+          if (isNaN(ageNum) || ageNum < 1 || ageNum > 120) {
+            setError('Please provide a valid age between 1 and 120')
+            setIsSubmitting(false)
+            return
+          }
+          
+          userData.age = ageNum
+          userData.gender = gender
+          userData.address = address.trim() || null
+        }
+
         // Add provider-specific fields for doctors
         if (userType === 'doctor') {
           userData.speciality = speciality
@@ -83,7 +111,7 @@ const Login = () => {
           setError(result.error)
         }
       } else {
-        // Login
+        // Login - NO CHANGES TO LOGIN FUNCTIONALITY
         const result = await login(email, password);
 
         if (result.success) {
@@ -104,6 +132,11 @@ const Login = () => {
     setEmail('')
     setPassword('')
     setPhone('')
+    // Reset patient fields
+    setAge('')
+    setGender('')
+    setAddress('')
+    // Reset provider fields
     setSpeciality('General physician')
     setExperience('1 Years')
     setDescription('')
@@ -151,44 +184,46 @@ const Login = () => {
         <form className="mt-8 space-y-6" onSubmit={onSubmitHandler}>
           <div className="bg-white shadow-lg rounded-lg px-6 py-8 space-y-6">
             
-            {/* User Type Selection */}
-            <div>
-              <label className="text-base font-medium text-gray-900">
-                {state === 'Sign Up' ? 'I am a:' : 'Sign in as:'}
-              </label>
-              <div className="mt-3 grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setUserType('patient')}
-                  className={`${
-                    userType === 'patient'
-                      ? 'bg-primary text-white border-primary'
-                      : 'bg-white text-gray-900 border-gray-200 hover:bg-gray-50'
-                  } relative flex items-center justify-center px-4 py-3 text-sm font-medium border rounded-md transition-colors`}
-                >
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  Patient
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setUserType('doctor')}
-                  className={`${
-                    userType === 'doctor'
-                      ? 'bg-primary text-white border-primary'
-                      : 'bg-white text-gray-900 border-gray-200 hover:bg-gray-50'
-                  } relative flex items-center justify-center px-4 py-3 text-sm font-medium border rounded-md transition-colors`}
-                >
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  Doctor
-                </button>
+            {/* User Type Selection - Only show during registration */}
+            {state === 'Sign Up' && (
+              <div>
+                <label className="text-base font-medium text-gray-900">
+                  I am a:
+                </label>
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setUserType('patient')}
+                    className={`${
+                      userType === 'patient'
+                        ? 'bg-primary text-white border-primary'
+                        : 'bg-white text-gray-900 border-gray-200 hover:bg-gray-50'
+                    } relative flex items-center justify-center px-4 py-3 text-sm font-medium border rounded-md transition-colors`}
+                  >
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    Patient
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUserType('doctor')}
+                    className={`${
+                      userType === 'doctor'
+                        ? 'bg-primary text-white border-primary'
+                        : 'bg-white text-gray-900 border-gray-200 hover:bg-gray-50'
+                    } relative flex items-center justify-center px-4 py-3 text-sm font-medium border rounded-md transition-colors`}
+                  >
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Doctor
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-md p-4">
@@ -236,6 +271,66 @@ const Login = () => {
                   />
                 </div>
 
+                {/* Patient-specific fields */}
+                {userType === 'patient' && (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Age *
+                        </label>
+                        <input
+                          type="number"
+                          required
+                          min="1"
+                          max="120"
+                          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary"
+                          placeholder="Enter your age"
+                          value={age}
+                          onChange={(e) => setAge(e.target.value)}
+                          disabled={isSubmitting}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Gender *
+                        </label>
+                        <select
+                          required
+                          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                          value={gender}
+                          onChange={(e) => setGender(e.target.value)}
+                          disabled={isSubmitting}
+                        >
+                          <option value="">Select gender</option>
+                          <option value="Male">Male</option>
+                          <option value="Female">Female</option>
+                          <option value="Other">Other</option>
+                          <option value="Prefer not to say">Prefer not to say</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Address (Optional)
+                      </label>
+                      <textarea
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary focus:border-primary"
+                        placeholder="Enter your address"
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
+                        disabled={isSubmitting}
+                        rows={3}
+                        maxLength={200}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">{address.length}/200 characters</p>
+                    </div>
+                  </>
+                )}
+
+                {/* Provider-specific fields */}
                 {userType === 'doctor' && (
                   <>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -389,29 +484,31 @@ const Login = () => {
           </div>
         </form>
 
-        {/* Feature highlights */}
-        <div className="text-center">
-          <div className="grid grid-cols-2 gap-4 mt-8">
-            <div className="flex items-center justify-center p-4 bg-white rounded-lg shadow-sm">
-              <svg className="w-8 h-8 text-primary mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
-              <div className="text-left">
-                <p className="text-sm font-medium text-gray-900">Secure</p>
-                <p className="text-xs text-gray-500">End-to-end encrypted</p>
+        {/* Feature highlights - Only show during login */}
+        {state === 'Login' && (
+          <div className="text-center">
+            <div className="grid grid-cols-2 gap-4 mt-8">
+              <div className="flex items-center justify-center p-4 bg-white rounded-lg shadow-sm">
+                <svg className="w-8 h-8 text-primary mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                <div className="text-left">
+                  <p className="text-sm font-medium text-gray-900">Secure</p>
+                  <p className="text-xs text-gray-500">End-to-end encrypted</p>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center justify-center p-4 bg-white rounded-lg shadow-sm">
-              <svg className="w-8 h-8 text-primary mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-              <div className="text-left">
-                <p className="text-sm font-medium text-gray-900">Fast</p>
-                <p className="text-xs text-gray-500">Quick appointments</p>
+              <div className="flex items-center justify-center p-4 bg-white rounded-lg shadow-sm">
+                <svg className="w-8 h-8 text-primary mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                <div className="text-left">
+                  <p className="text-sm font-medium text-gray-900">Fast</p>
+                  <p className="text-xs text-gray-500">Quick appointments</p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   )
