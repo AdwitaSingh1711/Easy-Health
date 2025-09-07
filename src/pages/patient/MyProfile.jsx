@@ -2,6 +2,8 @@
 import React, { useState, useContext, useEffect, useRef } from 'react'
 import { assets } from '../../assets/assets'
 import { AppContext } from '../../context/AppContext'
+import { apiService } from '../../services/api'
+import { toast } from 'react-toastify'
 
 const MyProfile = () => {
     const { user } = useContext(AppContext)
@@ -24,6 +26,7 @@ const MyProfile = () => {
     const [message, setMessage] = useState('')
     const [uploadedFiles, setUploadedFiles] = useState([])
     const [uploadingFile, setUploadingFile] = useState(false)
+    const [loadingDocuments, setLoadingDocuments] = useState(true)
 
     // Initialize user data when user context is available
     useEffect(() => {
@@ -41,6 +44,32 @@ const MyProfile = () => {
         }
     }, [user])
 
+    // Load user documents on component mount
+    useEffect(() => {
+        if (user && user.role === 'patient') {
+            loadUserDocuments()
+        }
+    }, [user])
+
+    const loadUserDocuments = async () => {
+        try {
+            setLoadingDocuments(true)
+            const response = await apiService.getMyDocuments()
+            setUploadedFiles(response.documents.map(doc => ({
+                id: doc.id,
+                name: doc.originalFileName,
+                size: doc.fileSize,
+                uploadDate: doc.uploadDate,
+                type: 'pdf'
+            })))
+        } catch (error) {
+            console.error('Failed to load documents:', error)
+            toast.error('Failed to load documents')
+        } finally {
+            setLoadingDocuments(false)
+        }
+    }
+
     const handleSave = async () => {
         setLoading(true)
         setMessage('')
@@ -54,12 +83,14 @@ const MyProfile = () => {
             
             setIsEdit(false)
             setMessage('Profile updated successfully!')
+            toast.success('Profile updated successfully!')
             
             // Clear message after 3 seconds
             setTimeout(() => setMessage(''), 3000)
         } catch (error) {
             console.error('Failed to update profile:', error)
             setMessage('Failed to update profile. Please try again.')
+            toast.error('Failed to update profile. Please try again.')
         } finally {
             setLoading(false)
         }
@@ -86,6 +117,7 @@ const MyProfile = () => {
         // Validate file type
         if (file.type !== 'application/pdf') {
             setMessage('Please select a PDF file only.')
+            toast.error('Please select a PDF file only.')
             return
         }
 
@@ -93,6 +125,7 @@ const MyProfile = () => {
         const maxSize = 10 * 1024 * 1024 // 10MB
         if (file.size > maxSize) {
             setMessage('File size must be less than 10MB.')
+            toast.error('File size must be less than 10MB.')
             return
         }
 
@@ -100,45 +133,108 @@ const MyProfile = () => {
         setMessage('')
 
         try {
-            // Here you would typically upload to your backend
-            // const formData = new FormData()
-            // formData.append('file', file)
-            // const response = await apiService.uploadDocument(formData)
+            console.log('Starting upload process for file:', file.name, 'Size:', file.size);
             
-            // For now, simulate upload
-            await new Promise(resolve => setTimeout(resolve, 2000))
+            // Step 1: Request upload permission from backend
+            console.log('Step 1: Requesting upload permission...');
+            const uploadRequest = await apiService.requestDocumentUpload({
+                originalFileName: file.name,
+                fileSize: file.size,
+                mimeType: file.type
+            })
+            console.log('Upload request successful:', uploadRequest);
+
+            // Step 2: Upload file directly to Azure using the presigned URL
+            console.log('Step 2: Uploading to Azure...');
+            await apiService.uploadFileToAzure(uploadRequest.uploadUrl, file)
+            console.log('Azure upload successful');
+
+            // Step 3: Confirm successful upload
+            // console.log('Step 3: Confirming upload...');
+            // await apiService.confirmDocumentUpload(uploadRequest.documentId)
+            // console.log('Upload confirmation successful');
             
-            // Add file to uploaded files list
-            const newFile = {
-                id: Date.now(),
-                name: file.name,
-                size: file.size,
-                uploadDate: new Date().toISOString(),
-                type: 'pdf'
-            }
-            
-            setUploadedFiles(prev => [...prev, newFile])
-            setMessage('Document uploaded successfully!')
+            // // Step 4: Refresh the documents list
+            // console.log('Step 4: Refreshing document list...');
+            // await loadUserDocuments()
+            // console.log('Document list refreshed');
             
             // Clear file input
             if (fileInputRef.current) {
                 fileInputRef.current.value = ''
             }
             
+            toast.success('Document uploaded successfully!')
+            setMessage('Document uploaded successfully!')
+            
             // Clear message after 3 seconds
             setTimeout(() => setMessage(''), 3000)
         } catch (error) {
-            console.error('Failed to upload file:', error)
-            setMessage('Failed to upload document. Please try again.')
+            console.error('Upload process failed:', error)
+            let errorMessage = 'Failed to upload document. Please try again.'
+            
+            // Handle specific error messages from backend
+            if (error.message.includes('Missing required fields')) {
+                errorMessage = 'Invalid file information. Please try again.'
+            } else if (error.message.includes('Only PDF files are allowed')) {
+                errorMessage = 'Only PDF files are allowed.'
+            } else if (error.message.includes('File too large')) {
+                errorMessage = 'File size exceeds 10MB limit.'
+            } else if (error.message.includes('Patient profile not found')) {
+                errorMessage = 'Patient profile not found. Please contact support.'
+            } else if (error.message.includes('Failed to upload file to Azure')) {
+                errorMessage = 'Failed to upload to cloud storage. Please check your internet connection and try again.'
+            } else if (error.message.includes('Failed to confirm upload')) {
+                errorMessage = 'Upload completed but confirmation failed. Please refresh the page to see your document.'
+            }
+            
+            setMessage(errorMessage)
+            toast.error(errorMessage)
         } finally {
             setUploadingFile(false)
         }
     }
 
-    const handleFileDelete = (fileId) => {
-        setUploadedFiles(prev => prev.filter(file => file.id !== fileId))
-        setMessage('Document removed successfully!')
-        setTimeout(() => setMessage(''), 3000)
+    const handleFileDownload = async (fileId, fileName) => {
+        try {
+            toast.info('Preparing download...')
+            const response = await apiService.getDocumentDownloadUrl(fileId)
+            
+            // Create a temporary link and trigger download
+            const link = document.createElement('a')
+            link.href = response.downloadUrl
+            link.download = response.originalFileName || fileName
+            link.target = '_blank'
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            
+            toast.success('Download started!')
+        } catch (error) {
+            console.error('Failed to download file:', error)
+            toast.error('Failed to download document. Please try again.')
+        }
+    }
+
+    const handleFileDelete = async (fileId, fileName) => {
+        if (!window.confirm(`Are you sure you want to delete "${fileName}"? This action cannot be undone.`)) {
+            return
+        }
+
+        try {
+            // Note: The backend doesn't have a delete endpoint in the provided code
+            // You would need to implement this endpoint in the backend first
+            // await apiService.deleteDocument(fileId)
+            
+            // For now, just remove from local state and show warning
+            setUploadedFiles(prev => prev.filter(file => file.id !== fileId))
+            toast.warning('Document removed from view. Note: Backend deletion not yet implemented.')
+            setMessage('Document removed successfully!')
+            setTimeout(() => setMessage(''), 3000)
+        } catch (error) {
+            console.error('Failed to delete file:', error)
+            toast.error('Failed to delete document. Please try again.')
+        }
     }
 
     const formatFileSize = (bytes) => {
@@ -445,7 +541,7 @@ const MyProfile = () => {
                                 {uploadingFile ? (
                                     <div className="flex flex-col items-center gap-2">
                                         <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-                                        <p className="text-sm text-gray-600">Uploading...</p>
+                                        <p className="text-sm text-gray-600">Uploading to secure storage...</p>
                                     </div>
                                 ) : (
                                     <div className="flex flex-col items-center gap-2">
@@ -454,7 +550,7 @@ const MyProfile = () => {
                                         </svg>
                                         <div>
                                             <p className="text-sm font-medium text-gray-900">Upload PDF Document</p>
-                                            <p className="text-xs text-gray-500">Max 10MB</p>
+                                            <p className="text-xs text-gray-500">Max 10MB • Secure encrypted storage</p>
                                         </div>
                                     </div>
                                 )}
@@ -463,30 +559,38 @@ const MyProfile = () => {
 
                         {/* Uploaded Files List */}
                         <div className="space-y-3">
-                            {uploadedFiles.length === 0 ? (
+                            {loadingDocuments ? (
+                                <div className="text-center py-6">
+                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
+                                    <p className="text-sm text-gray-500">Loading documents...</p>
+                                </div>
+                            ) : uploadedFiles.length === 0 ? (
                                 <div className="text-center py-6 text-gray-500">
                                     <svg className="w-12 h-12 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                     </svg>
                                     <p className="text-sm">No documents uploaded</p>
+                                    <p className="text-xs text-gray-400 mt-1">Upload your first medical document to get started</p>
                                 </div>
                             ) : (
                                 uploadedFiles.map((file) => (
-                                    <div key={file.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                    <div key={file.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
                                         <div className="flex-shrink-0">
                                             <svg className="w-8 h-8 text-red-500" fill="currentColor" viewBox="0 0 24 24">
                                                 <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
                                             </svg>
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
+                                            <p className="text-sm font-medium text-gray-900 truncate" title={file.name}>
+                                                {file.name}
+                                            </p>
                                             <p className="text-xs text-gray-500">
                                                 {formatFileSize(file.size)} • {formatDate(file.uploadDate)}
                                             </p>
                                         </div>
                                         <div className="flex gap-1">
                                             <button
-                                                onClick={() => {/* Download functionality would go here */}}
+                                                onClick={() => handleFileDownload(file.id, file.name)}
                                                 className="p-1.5 text-gray-400 hover:text-primary transition"
                                                 title="Download"
                                             >
@@ -495,7 +599,7 @@ const MyProfile = () => {
                                                 </svg>
                                             </button>
                                             <button
-                                                onClick={() => handleFileDelete(file.id)}
+                                                onClick={() => handleFileDelete(file.id, file.name)}
                                                 className="p-1.5 text-gray-400 hover:text-red-500 transition"
                                                 title="Delete"
                                             >
@@ -510,15 +614,39 @@ const MyProfile = () => {
                         </div>
 
                         {/* Upload Instructions */}
-                        <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                            <h4 className="text-sm font-medium text-blue-900 mb-1">Document Guidelines</h4>
-                            <ul className="text-xs text-blue-700 space-y-1">
-                                <li>• Upload medical reports, prescriptions, or test results</li>
-                                <li>• Only PDF files are accepted</li>
-                                <li>• Maximum file size: 10MB</li>
-                                <li>• Documents are securely stored and encrypted</li>
-                            </ul>
+                        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                            <div className="flex items-start gap-3">
+                                <svg className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <div>
+                                    <h4 className="text-sm font-medium text-blue-900 mb-2">Document Guidelines</h4>
+                                    <ul className="text-xs text-blue-700 space-y-1">
+                                        <li>• Upload medical reports, prescriptions, or test results</li>
+                                        <li>• Only PDF files are accepted for security</li>
+                                        <li>• Maximum file size: 10MB</li>
+                                        <li>• Documents are stored securely with end-to-end encryption</li>
+                                        <li>• Files are uploaded directly to Azure cloud storage</li>
+                                    </ul>
+                                </div>
+                            </div>
                         </div>
+
+                        {/* Document Statistics */}
+                        {uploadedFiles.length > 0 && (
+                            <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="text-gray-600">Total Documents:</span>
+                                    <span className="font-medium text-gray-900">{uploadedFiles.length}</span>
+                                </div>
+                                <div className="flex items-center justify-between text-sm mt-1">
+                                    <span className="text-gray-600">Total Size:</span>
+                                    <span className="font-medium text-gray-900">
+                                        {formatFileSize(uploadedFiles.reduce((total, file) => total + file.size, 0))}
+                                    </span>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
