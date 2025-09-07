@@ -1,4 +1,4 @@
-// src/services/api.js
+// src/services/api.js - Complete version with all doctor appointment methods
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
 class ApiService {
@@ -94,6 +94,32 @@ class ApiService {
     return this.request(`/appointments/${appointmentId}/cancel`, {
       method: 'PUT',
     });
+  }
+
+  // NEW: Doctor/Provider appointment endpoints
+  async getDoctorAppointments() {
+    return this.request('/appointments/doctor-appointments');
+  }
+
+  async getDashboardData() {
+    return this.request('/appointments/doctor-appointments');
+  }
+
+  async completeAppointment(appointmentId) {
+    return this.request(`/appointments/${appointmentId}/complete`, {
+      method: 'PUT',
+    });
+  }
+
+  async cancelAppointmentByDoctor(appointmentId) {
+    return this.request(`/appointments/${appointmentId}/cancel-by-doctor`, {
+      method: 'PUT',
+    });
+  }
+
+  // Patient documents for doctors to view
+  async getPatientDocuments(patientId) {
+    return this.request(`/documents/patient/${patientId}`);
   }
 
   // Document endpoints
