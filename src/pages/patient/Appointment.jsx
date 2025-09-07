@@ -237,11 +237,7 @@ const Appointment = () => {
 
             {/* ---------- Doctor Details ----------- */}
             <div className="flex flex-col sm:flex-row gap-6 bg-white rounded-2xl shadow-md p-6">
-                <img 
-                    className="rounded-lg object-cover shadow max-h-72" 
-                    src={docInfo.image} 
-                    alt={docInfo.name} 
-                />
+                
                 
                 <div className="flex-1">
                     <p className="flex items-center gap-2 text-2xl font-bold text-gray-900">

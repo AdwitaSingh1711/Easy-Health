@@ -167,7 +167,7 @@ const Login = () => {
         <div className="text-center">
           <img 
             className="mx-auto h-12 w-auto" 
-            src={assets.logo} 
+            src={assets.MedEaseLogo} 
             alt="EasyHealth" 
           />
           <h2 className="mt-6 text-3xl font-bold text-gray-900">

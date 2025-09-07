@@ -5,7 +5,7 @@ import { toast } from 'react-toastify';
 
 export const AppContext = createContext();
 
-// Mock doctor dashboard data for providers
+// Mock doctor dashboard data for providers (fallback only)
 const mockDoctorDashboard = {
   earnings: 2500,
   appointments: 25,
@@ -67,10 +67,11 @@ const AppContextProvider = (props) => {
     const [doctors, setDoctors] = useState([]);
     
     // Doctor-specific state (for providers)
-    const [doctorAppointments, setDoctorAppointments] = useState(mockDoctorDashboard.latestAppointments);
-    const [dashData, setDashData] = useState(mockDoctorDashboard);
+    const [doctorAppointments, setDoctorAppointments] = useState([]);
+    const [dashData, setDashData] = useState(null);
     const [profileData, setProfileData] = useState(mockDoctorProfile);
     const [profileLoading, setProfileLoading] = useState(false);
+    const [appointmentsLoading, setAppointmentsLoading] = useState(false);
 
     const currencySymbol = '$';
 
@@ -78,11 +79,18 @@ const AppContextProvider = (props) => {
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
     const slotDateFormat = (slotDate) => {
-        const dateArray = slotDate.split('_');
-        return dateArray[0] + " " + months[Number(dateArray[1]) - 1] + " " + dateArray[2];
+        // Handle both formats: "24_08_2025" and "2025-08-24"
+        if (slotDate.includes('_')) {
+            const dateArray = slotDate.split('_');
+            return dateArray[0] + " " + months[Number(dateArray[1]) - 1] + " " + dateArray[2];
+        } else {
+            const date = new Date(slotDate);
+            return date.getDate() + " " + months[date.getMonth()] + " " + date.getFullYear();
+        }
     };
 
     const calculateAge = (dob) => {
+        if (!dob) return 'N/A';
         const today = new Date();
         const birthDate = new Date(dob);
         let age = today.getFullYear() - birthDate.getFullYear();
@@ -146,7 +154,7 @@ const AppContextProvider = (props) => {
                     isReal: false
                 }));
                 setDoctors(flaggedDummyDoctors);
-                toast.warning('Showing demo doctors. Real doctors could not be loaded.');
+                
             } catch (importError) {
                 console.error('Failed to load dummy doctors:', importError);
                 setDoctors([]);
@@ -179,6 +187,63 @@ const AppContextProvider = (props) => {
         }
     };
 
+    // NEW: Fetch doctor appointments from API
+    const getDoctorAppointments = async () => {
+        if (!user || user.role !== 'provider') return;
+        
+        setAppointmentsLoading(true);
+        try {
+            const response = await apiService.getDoctorAppointments();
+            
+            if (response.success) {
+                setDoctorAppointments(response.appointments);
+                console.log('Doctor appointments loaded from API:', response.appointments.length);
+            } else {
+                console.error('Failed to fetch appointments');
+                // Keep existing appointments or use mock data
+                if (doctorAppointments.length === 0) {
+                    setDoctorAppointments(mockDoctorDashboard.latestAppointments);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching doctor appointments:', error);
+            toast.error('Failed to load appointments');
+            // Fallback to mock data if no appointments exist
+            if (doctorAppointments.length === 0) {
+                setDoctorAppointments(mockDoctorDashboard.latestAppointments);
+            }
+        } finally {
+            setAppointmentsLoading(false);
+        }
+    };
+
+    // NEW: Fetch dashboard data from API
+    const getDashData = async () => {
+        if (!user || user.role !== 'provider') return;
+        
+        setAppointmentsLoading(true);
+        try {
+            const response = await apiService.getDashboardData();
+            
+            if (response.success) {
+                setDashData(response.dashData);
+                setDoctorAppointments(response.appointments);
+                console.log('Dashboard data loaded from API');
+            } else {
+                console.error('Failed to fetch dashboard data');
+                // Use mock data if API fails
+                setDashData(mockDoctorDashboard);
+            }
+        } catch (error) {
+            console.error('Error fetching dashboard data:', error);
+            toast.error('Failed to load dashboard data');
+            // Fallback to mock data
+            setDashData(mockDoctorDashboard);
+        } finally {
+            setAppointmentsLoading(false);
+        }
+    };
+
     // Check if user is authenticated on app load
     useEffect(() => {
         const checkAuth = async () => {
@@ -188,12 +253,6 @@ const AppContextProvider = (props) => {
                     const userData = await apiService.getProfile();
                     setUser(userData);
                     setToken(storedToken);
-                    
-                    // Fetch provider profile if user is a provider
-                    if (userData.role === 'provider') {
-                        // We'll fetch the profile data in a separate effect
-                        // to avoid race conditions
-                    }
                 } catch (error) {
                     console.error('Auth check failed:', error);
                     localStorage.removeItem('authToken');
@@ -206,10 +265,11 @@ const AppContextProvider = (props) => {
         checkAuth();
     }, []);
 
-    // Fetch provider profile when user is set and is a provider
+    // Fetch provider data when user is set and is a provider
     useEffect(() => {
         if (user && user.role === 'provider') {
             fetchProviderProfile();
+            getDashData(); // Fetch dashboard data when provider logs in
         }
     }, [user]);
 
@@ -226,7 +286,7 @@ const AppContextProvider = (props) => {
             setToken(response.token);
             setUser(response.user);
             
-            // Provider profile will be fetched automatically via useEffect
+            // Provider profile and dashboard data will be fetched automatically via useEffect
             if (response.user.role === 'provider') {
                 toast.success(`Welcome back, Dr. ${response.user.name}!`);
             } else {
@@ -274,20 +334,11 @@ const AppContextProvider = (props) => {
         setUser(null);
         
         // Reset doctor-specific data
-        setDoctorAppointments(mockDoctorDashboard.latestAppointments);
-        setDashData(mockDoctorDashboard);
+        setDoctorAppointments([]);
+        setDashData(null);
         setProfileData(mockDoctorProfile);
         
         toast.success('Logged out successfully');
-    };
-
-    // Doctor-specific functions (for providers)
-    const getDoctorAppointments = () => {
-        console.log('Doctor appointments loaded');
-    };
-
-    const getDashData = () => {
-        console.log('Dashboard data loaded');
     };
 
     const getDoctorProfile = () => {
@@ -295,28 +346,46 @@ const AppContextProvider = (props) => {
         fetchProviderProfile();
     };
 
-    const cancelAppointment = (appointmentId) => {
-        const updatedAppointments = doctorAppointments.map(apt => 
-            apt._id === appointmentId ? { ...apt, cancelled: true } : apt
-        );
-        setDoctorAppointments(updatedAppointments);
-        setDashData(prev => ({
-            ...prev,
-            latestAppointments: updatedAppointments
-        }));
-        toast.success('Appointment cancelled successfully');
+    // NEW: Real API-based cancel appointment
+    const cancelAppointment = async (appointmentId) => {
+        if (!user || user.role !== 'provider') return;
+        
+        try {
+            const response = await apiService.cancelAppointmentByDoctor(appointmentId);
+            
+            if (response.success) {
+                toast.success('Appointment cancelled successfully');
+                // Refresh appointments and dashboard data
+                await getDoctorAppointments();
+                await getDashData();
+            } else {
+                toast.error('Failed to cancel appointment');
+            }
+        } catch (error) {
+            console.error('Error cancelling appointment:', error);
+            toast.error('Failed to cancel appointment');
+        }
     };
 
-    const completeAppointment = (appointmentId) => {
-        const updatedAppointments = doctorAppointments.map(apt => 
-            apt._id === appointmentId ? { ...apt, isCompleted: true } : apt
-        );
-        setDoctorAppointments(updatedAppointments);
-        setDashData(prev => ({
-            ...prev,
-            latestAppointments: updatedAppointments
-        }));
-        toast.success('Appointment marked as completed');
+    // NEW: Real API-based complete appointment
+    const completeAppointment = async (appointmentId) => {
+        if (!user || user.role !== 'provider') return;
+        
+        try {
+            const response = await apiService.completeAppointment(appointmentId);
+            
+            if (response.success) {
+                toast.success('Appointment completed successfully');
+                // Refresh appointments and dashboard data
+                await getDoctorAppointments();
+                await getDashData();
+            } else {
+                toast.error('Failed to complete appointment');
+            }
+        } catch (error) {
+            console.error('Error completing appointment:', error);
+            toast.error('Failed to complete appointment');
+        }
     };
 
     const updateDoctorProfile = async (updatedData) => {
@@ -359,6 +428,7 @@ const AppContextProvider = (props) => {
         dashData,
         profileData,
         profileLoading,
+        appointmentsLoading, // NEW: Loading state for appointments
         setProfileData,
         getDoctorAppointments,
         getDashData,

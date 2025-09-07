@@ -15,6 +15,7 @@ import info_icon from './info_icon.svg'
 import upload_icon from './upload_icon.png'
 import stripe_logo from './stripe_logo.png'
 import razorpay_logo from './razorpay_logo.png'
+import MedEaseLogo from './MedEaseLogo.png'
 
 // Doctor dashboard icons
 import earning_icon from './earning_icon.svg'
@@ -51,6 +52,7 @@ import Gynecologist from './Gynecologist.svg'
 import Neurologist from './Neurologist.svg'
 import Pediatricians from './Pediatricians.svg'
 
+
 export const assets = {
     appointment_img,
     header_img,
@@ -68,6 +70,7 @@ export const assets = {
     dropdown_icon,
     upload_icon,
     stripe_logo,
+    MedEaseLogo,
     razorpay_logo,
     
     // Doctor dashboard icons
