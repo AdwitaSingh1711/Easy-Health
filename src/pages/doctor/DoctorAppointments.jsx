@@ -63,14 +63,7 @@ const DoctorAppointments = () => {
             <div className='flex flex-wrap justify-between max-sm:gap-5 max-sm:text-base sm:grid grid-cols-[0.5fr_2fr_1fr_1fr_3fr_1fr_1fr] gap-1 items-center text-gray-500 py-3 px-6 border-b hover:bg-gray-50' key={item._id || index}>
               <p className='max-sm:hidden'>{index + 1}</p>
               <div className='flex items-center gap-2'>
-                <img 
-                  src={item.userData.image} 
-                  className='w-8 h-8 rounded-full object-cover' 
-                  alt={item.userData.name}
-                  onError={(e) => {
-                    e.target.src = `https://via.placeholder.com/32/4F46E5/FFFFFF?Text=${encodeURIComponent(item.userData.name.substring(0, 2))}`
-                  }}
-                />
+                
                 <div>
                   <p className='font-medium text-gray-800'>{item.userData.name}</p>
                   <p className='text-xs text-gray-500'>{item.userData.email}</p>

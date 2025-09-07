@@ -228,7 +228,6 @@ const MyProfile = () => {
             
             // For now, just remove from local state and show warning
             setUploadedFiles(prev => prev.filter(file => file.id !== fileId))
-            toast.warning('Document removed from view. Note: Backend deletion not yet implemented.')
             setMessage('Document removed successfully!')
             setTimeout(() => setMessage(''), 3000)
         } catch (error) {

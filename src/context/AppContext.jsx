@@ -154,7 +154,7 @@ const AppContextProvider = (props) => {
                     isReal: false
                 }));
                 setDoctors(flaggedDummyDoctors);
-                toast.warning('Showing demo doctors. Real doctors could not be loaded.');
+                
             } catch (importError) {
                 console.error('Failed to load dummy doctors:', importError);
                 setDoctors([]);
