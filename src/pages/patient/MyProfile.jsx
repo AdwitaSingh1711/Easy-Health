@@ -149,15 +149,15 @@ const MyProfile = () => {
             await apiService.uploadFileToAzure(uploadRequest.uploadUrl, file)
             console.log('Azure upload successful');
 
-            // Step 3: Confirm successful upload
-            // console.log('Step 3: Confirming upload...');
-            // await apiService.confirmDocumentUpload(uploadRequest.documentId)
-            // console.log('Upload confirmation successful');
+            //Step 3: Confirm successful upload
+            console.log('Step 3: Confirming upload...');
+            await apiService.confirmDocumentUpload(uploadRequest.documentId)
+            console.log('Upload confirmation successful');
             
-            // // Step 4: Refresh the documents list
-            // console.log('Step 4: Refreshing document list...');
-            // await loadUserDocuments()
-            // console.log('Document list refreshed');
+            // Step 4: Refresh the documents list
+            console.log('Step 4: Refreshing document list...');
+            await loadUserDocuments()
+            console.log('Document list refreshed');
             
             // Clear file input
             if (fileInputRef.current) {
