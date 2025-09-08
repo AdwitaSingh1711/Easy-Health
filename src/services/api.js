@@ -1,6 +1,6 @@
 // src/services/api.js - Complete version with all doctor appointment methods
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-
+//
 class ApiService {
   async request(endpoint, options = {}) {
     const url = `${API_BASE_URL}${endpoint}`;
@@ -174,6 +174,20 @@ class ApiService {
       throw error;
     }
   }
+  // Add these methods to your src/services/api.js file
+// Place them with your other profile-related methods
+
+// Patient Profile endpoints (for patients)
+async getPatientProfile() {
+  return this.request('/appointments/patient-profile');
+}
+
+async updatePatientProfile(profileData) {
+  return this.request('/appointments/patient-profile', {
+    method: 'PUT',
+    body: JSON.stringify(profileData),
+  });
+}
 }
 
 export const apiService = new ApiService();

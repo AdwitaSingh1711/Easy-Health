@@ -1,4 +1,4 @@
-// src/context/AppContext.jsx
+// src/context/AppContext.jsx - Updated version with patient profile support
 import { createContext, useState, useEffect } from "react";
 import { apiService } from "../services/api";
 import { toast } from 'react-toastify';
@@ -60,6 +60,22 @@ const mockDoctorProfile = {
   available: true
 };
 
+// Default mock patient profile for fallback
+const mockPatientProfile = {
+  _id: '1',
+  name: 'John Patient',
+  email: 'patient@example.com',
+  image: 'https://via.placeholder.com/300/4F46E5/FFFFFF?Text=JP',
+  phone: '',
+  age: '',
+  gender: '',
+  address: {
+    line1: '',
+    line2: ''
+  },
+  profileComplete: false
+};
+
 const AppContextProvider = (props) => {
     const [user, setUser] = useState(null);
     const [token, setToken] = useState(localStorage.getItem('authToken'));
@@ -72,6 +88,10 @@ const AppContextProvider = (props) => {
     const [profileData, setProfileData] = useState(mockDoctorProfile);
     const [profileLoading, setProfileLoading] = useState(false);
     const [appointmentsLoading, setAppointmentsLoading] = useState(false);
+
+    // Patient-specific state (for patients)
+    const [patientProfileData, setPatientProfileData] = useState(null);
+    const [patientProfileLoading, setPatientProfileLoading] = useState(false);
 
     const currencySymbol = '$';
 
@@ -187,7 +207,34 @@ const AppContextProvider = (props) => {
         }
     };
 
-    // NEW: Fetch doctor appointments from API
+    // NEW: Fetch patient profile from API
+    const fetchPatientProfile = async () => {
+        if (!user || user.role !== 'patient') return;
+        
+        setPatientProfileLoading(true);
+        try {
+            const response = await apiService.getPatientProfile();
+            setPatientProfileData(response.profile);
+            console.log('Patient profile loaded from API:', response.profile);
+        } catch (error) {
+            console.error('Failed to fetch patient profile:', error);
+            toast.error('Failed to load profile data');
+            
+            // Fallback to basic user info if API fails
+            if (user) {
+                setPatientProfileData({
+                    ...mockPatientProfile,
+                    name: user.name,
+                    email: user.email,
+                    phone: user.phone || ''
+                });
+            }
+        } finally {
+            setPatientProfileLoading(false);
+        }
+    };
+
+    // Fetch doctor appointments from API
     const getDoctorAppointments = async () => {
         if (!user || user.role !== 'provider') return;
         
@@ -217,7 +264,7 @@ const AppContextProvider = (props) => {
         }
     };
 
-    // NEW: Fetch dashboard data from API
+    // Fetch dashboard data from API
     const getDashData = async () => {
         if (!user || user.role !== 'provider') return;
         
@@ -265,11 +312,13 @@ const AppContextProvider = (props) => {
         checkAuth();
     }, []);
 
-    // Fetch provider data when user is set and is a provider
+    // Fetch role-specific data when user is set
     useEffect(() => {
         if (user && user.role === 'provider') {
             fetchProviderProfile();
             getDashData(); // Fetch dashboard data when provider logs in
+        } else if (user && user.role === 'patient') {
+            fetchPatientProfile(); // Fetch patient profile when patient logs in
         }
     }, [user]);
 
@@ -286,7 +335,7 @@ const AppContextProvider = (props) => {
             setToken(response.token);
             setUser(response.user);
             
-            // Provider profile and dashboard data will be fetched automatically via useEffect
+            // Role-specific profile and dashboard data will be fetched automatically via useEffect
             if (response.user.role === 'provider') {
                 toast.success(`Welcome back, Dr. ${response.user.name}!`);
             } else {
@@ -333,10 +382,11 @@ const AppContextProvider = (props) => {
         setToken(null);
         setUser(null);
         
-        // Reset doctor-specific data
+        // Reset role-specific data
         setDoctorAppointments([]);
         setDashData(null);
         setProfileData(mockDoctorProfile);
+        setPatientProfileData(null);
         
         toast.success('Logged out successfully');
     };
@@ -346,7 +396,7 @@ const AppContextProvider = (props) => {
         fetchProviderProfile();
     };
 
-    // NEW: Real API-based cancel appointment
+    // Real API-based cancel appointment
     const cancelAppointment = async (appointmentId) => {
         if (!user || user.role !== 'provider') return;
         
@@ -367,7 +417,7 @@ const AppContextProvider = (props) => {
         }
     };
 
-    // NEW: Real API-based complete appointment
+    // Real API-based complete appointment
     const completeAppointment = async (appointmentId) => {
         if (!user || user.role !== 'provider') return;
         
@@ -404,6 +454,23 @@ const AppContextProvider = (props) => {
         }
     };
 
+    // NEW: Update patient profile
+    const updatePatientProfile = async (updatedData) => {
+        try {
+            setPatientProfileLoading(true);
+            const response = await apiService.updatePatientProfile(updatedData);
+            setPatientProfileData(response.profile);
+            toast.success('Profile updated successfully');
+            return { success: true };
+        } catch (error) {
+            console.error('Failed to update patient profile:', error);
+            toast.error(error.message || 'Failed to update profile');
+            return { success: false, error: error.message };
+        } finally {
+            setPatientProfileLoading(false);
+        }
+    };
+
     const value = {
         // Common properties
         doctors,
@@ -428,7 +495,7 @@ const AppContextProvider = (props) => {
         dashData,
         profileData,
         profileLoading,
-        appointmentsLoading, // NEW: Loading state for appointments
+        appointmentsLoading,
         setProfileData,
         getDoctorAppointments,
         getDashData,
@@ -437,6 +504,12 @@ const AppContextProvider = (props) => {
         completeAppointment,
         updateDoctorProfile,
         fetchProviderProfile, // Expose for manual refresh
+
+        // Patient-specific properties (used when user.role === 'patient')
+        patientProfileData,
+        patientProfileLoading,
+        fetchPatientProfile,
+        updatePatientProfile,
     };
 
     return (
