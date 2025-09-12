@@ -1,4 +1,4 @@
-// src/pages/patient/MyProfile.jsx
+// src/pages/patient/MyProfile.jsx - Updated with patient profile API integration
 import React, { useState, useContext, useEffect, useRef } from 'react'
 import { assets } from '../../assets/assets'
 import { AppContext } from '../../context/AppContext'
@@ -6,7 +6,13 @@ import { apiService } from '../../services/api'
 import { toast } from 'react-toastify'
 
 const MyProfile = () => {
-    const { user } = useContext(AppContext)
+    const { 
+        user, 
+        patientProfileData, 
+        patientProfileLoading, 
+        updatePatientProfile 
+    } = useContext(AppContext)
+    
     const fileInputRef = useRef(null)
     const [isEdit, setIsEdit] = useState(false)
     const [userData, setUserData] = useState({
@@ -19,7 +25,8 @@ const MyProfile = () => {
             line2: '',
         },
         gender: '',
-        dob: ''
+        dob: '',
+        age: ''
     })
     
     const [loading, setLoading] = useState(false)
@@ -28,21 +35,36 @@ const MyProfile = () => {
     const [uploadingFile, setUploadingFile] = useState(false)
     const [loadingDocuments, setLoadingDocuments] = useState(true)
 
-    // Initialize user data when user context is available
+    // Initialize user data from patient profile context
     useEffect(() => {
-        if (user) {
+        if (patientProfileData) {
+            console.log('Setting user data from patient profile:', patientProfileData);
+            setUserData(prevData => ({
+                ...prevData,
+                name: patientProfileData.name || '',
+                email: patientProfileData.email || '',
+                phone: patientProfileData.phone || '',
+                age: patientProfileData.age ? patientProfileData.age.toString() : '',
+                gender: patientProfileData.gender || '',
+                address: {
+                    line1: patientProfileData.address?.line1 || '',
+                    line2: patientProfileData.address?.line2 || ''
+                },
+                // Keep existing image and dob from previous state
+                image: prevData.image,
+                dob: prevData.dob
+            }))
+        } else if (user) {
+            // Fallback to basic user info if profile data isn't loaded yet
+            console.log('Setting user data from basic user info:', user);
             setUserData(prevData => ({
                 ...prevData,
                 name: user.name || '',
                 email: user.email || '',
-                phone: user.phone || '',
-                // Keep existing values for fields not available from backend
-                address: prevData.address,
-                gender: prevData.gender,
-                dob: prevData.dob
+                phone: user.phone || ''
             }))
         }
-    }, [user])
+    }, [patientProfileData, user])
 
     // Load user documents on component mount
     useEffect(() => {
@@ -75,18 +97,41 @@ const MyProfile = () => {
         setMessage('')
         
         try {
-            // Here you would typically make an API call to update the profile
-            // await apiService.updateProfile(userData)
+            // Validate required fields
+            if (!userData.name.trim()) {
+                setMessage('Name is required.')
+                toast.error('Name is required.')
+                setLoading(false)
+                return
+            }
+
+            // Prepare data for API
+            const profileUpdateData = {
+                name: userData.name.trim(),
+                phone: userData.phone.trim(),
+                age: userData.age ? parseInt(userData.age) : undefined,
+                gender: userData.gender || undefined,
+                address: {
+                    line1: userData.address.line1.trim(),
+                    line2: userData.address.line2.trim()
+                }
+            };
+
+            console.log('Updating profile with data:', profileUpdateData);
+
+            const result = await updatePatientProfile(profileUpdateData);
             
-            // For now, just simulate a save
-            await new Promise(resolve => setTimeout(resolve, 1000))
-            
-            setIsEdit(false)
-            setMessage('Profile updated successfully!')
-            toast.success('Profile updated successfully!')
-            
-            // Clear message after 3 seconds
-            setTimeout(() => setMessage(''), 3000)
+            if (result.success) {
+                setIsEdit(false)
+                setMessage('Profile updated successfully!')
+                console.log('Profile updated successfully');
+                
+                // Clear message after 3 seconds
+                setTimeout(() => setMessage(''), 3000)
+            } else {
+                setMessage(result.error || 'Failed to update profile. Please try again.')
+                toast.error(result.error || 'Failed to update profile. Please try again.')
+            }
         } catch (error) {
             console.error('Failed to update profile:', error)
             setMessage('Failed to update profile. Please try again.')
@@ -97,8 +142,20 @@ const MyProfile = () => {
     }
 
     const handleCancel = () => {
-        // Reset to original user data
-        if (user) {
+        // Reset to original profile data
+        if (patientProfileData) {
+            setUserData(prevData => ({
+                ...prevData,
+                name: patientProfileData.name || '',
+                phone: patientProfileData.phone || '',
+                age: patientProfileData.age ? patientProfileData.age.toString() : '',
+                gender: patientProfileData.gender || '',
+                address: {
+                    line1: patientProfileData.address?.line1 || '',
+                    line2: patientProfileData.address?.line2 || ''
+                }
+            }))
+        } else if (user) {
             setUserData(prevData => ({
                 ...prevData,
                 name: user.name || '',
@@ -228,8 +285,9 @@ const MyProfile = () => {
             
             // For now, just remove from local state and show warning
             setUploadedFiles(prev => prev.filter(file => file.id !== fileId))
-            setMessage('Document removed successfully!')
-            setTimeout(() => setMessage(''), 3000)
+            setMessage('Document removed from view (deletion not implemented in backend yet)')
+            toast.warning('Document removed from view (deletion not implemented in backend yet)')
+            setTimeout(() => setMessage(''), 5000)
         } catch (error) {
             console.error('Failed to delete file:', error)
             toast.error('Failed to delete document. Please try again.')
@@ -255,12 +313,23 @@ const MyProfile = () => {
         })
     }
 
-    if (!user) {
+    // Show loading state if profile is still loading or user is not loaded
+    if (patientProfileLoading || (!patientProfileData && !user)) {
         return (
             <div className="min-h-[60vh] flex items-center justify-center">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
                     <p className="mt-2 text-gray-600">Loading profile...</p>
+                </div>
+            </div>
+        )
+    }
+
+    if (!user) {
+        return (
+            <div className="min-h-[60vh] flex items-center justify-center">
+                <div className="text-center">
+                    <p className="text-gray-600">Please log in to view your profile.</p>
                 </div>
             </div>
         )
@@ -272,6 +341,13 @@ const MyProfile = () => {
             <div className="mb-8">
                 <h1 className="text-2xl font-semibold text-gray-900">My Profile</h1>
                 <p className="text-gray-600 mt-1">Manage your account information and documents</p>
+                {patientProfileData?.profileComplete === false && (
+                    <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                        <p className="text-amber-800 text-sm">
+                            ⚠️ Please complete your profile by adding your age, gender, and address for better service.
+                        </p>
+                    </div>
+                )}
             </div>
 
             {/* Success/Error Messages */}
@@ -279,6 +355,8 @@ const MyProfile = () => {
                 <div className={`mb-6 p-4 rounded-lg ${
                     message.includes('successfully') 
                         ? 'bg-green-50 border border-green-200 text-green-600' 
+                        : message.includes('warning') || message.includes('not implemented')
+                        ? 'bg-amber-50 border border-amber-200 text-amber-600'
                         : 'bg-red-50 border border-red-200 text-red-600'
                 }`}>
                     {message}
@@ -292,7 +370,7 @@ const MyProfile = () => {
                         {/* Profile Image and Name */}
                         <div className="flex items-center gap-6 mb-8">
                             <div className="relative">
-                                <img className='w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg' src={userData.image} alt="Profile" />
+                                
                                 {isEdit && (
                                     <button className="absolute bottom-0 right-0 bg-primary text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg hover:bg-primary/90">
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -310,11 +388,19 @@ const MyProfile = () => {
                                         type="text" 
                                         onChange={(e) => setUserData(prev => ({ ...prev, name: e.target.value }))} 
                                         value={userData.name} 
+                                        placeholder="Enter your full name"
+                                        required
                                     />
                                 ) : (
                                     <div>
-                                        <h2 className='text-2xl font-semibold text-gray-900'>{userData.name}</h2>
+                                        <h2 className='text-2xl font-semibold text-gray-900'>{userData.name || 'Name not provided'}</h2>
                                         <p className="text-gray-600 capitalize">{user.role}</p>
+                                        {patientProfileData?.age && (
+                                            <p className="text-sm text-gray-500 mt-1">
+                                                {patientProfileData.age} years old
+                                                {patientProfileData.gender && ` • ${patientProfileData.gender}`}
+                                            </p>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -351,7 +437,7 @@ const MyProfile = () => {
                                             type="tel" 
                                             onChange={(e) => setUserData(prev => ({ ...prev, phone: e.target.value }))} 
                                             value={userData.phone} 
-                                            placeholder="Enter phone number"
+                                            placeholder="Enter phone number (e.g., +1234567890)"
                                         />
                                     ) : (
                                         <p className='p-3 text-gray-600 bg-gray-50 rounded-lg'>
@@ -381,7 +467,7 @@ const MyProfile = () => {
                                             type="text" 
                                             onChange={(e) => setUserData(prev => ({ ...prev, address: { ...prev.address, line1: e.target.value } }))} 
                                             value={userData.address.line1} 
-                                            placeholder="Enter address line 1"
+                                            placeholder="Enter street address"
                                         />
                                     ) : (
                                         <p className='p-3 text-gray-600 bg-gray-50 rounded-lg'>
@@ -391,14 +477,14 @@ const MyProfile = () => {
                                 </div>
                                 
                                 <div>
-                                    <label className='block text-sm font-medium text-gray-700 mb-2'>Address Line 2</label>
+                                    <label className='block text-sm font-medium text-gray-700 mb-2'>Address Line 2 (Optional)</label>
                                     {isEdit ? (
                                         <input 
                                             className='w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary' 
                                             type="text" 
                                             onChange={(e) => setUserData(prev => ({ ...prev, address: { ...prev.address, line2: e.target.value } }))} 
                                             value={userData.address.line2} 
-                                            placeholder="Enter address line 2"
+                                            placeholder="Enter apartment, suite, etc."
                                         />
                                     ) : (
                                         <p className='p-3 text-gray-600 bg-gray-50 rounded-lg'>
@@ -420,6 +506,25 @@ const MyProfile = () => {
                             
                             <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
                                 <div>
+                                    <label className='block text-sm font-medium text-gray-700 mb-2'>Age</label>
+                                    {isEdit ? (
+                                        <input 
+                                            className='w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary' 
+                                            type="number" 
+                                            min="1" 
+                                            max="120"
+                                            onChange={(e) => setUserData(prev => ({ ...prev, age: e.target.value }))} 
+                                            value={userData.age} 
+                                            placeholder="Enter your age"
+                                        />
+                                    ) : (
+                                        <p className='p-3 text-gray-600 bg-gray-50 rounded-lg'>
+                                            {userData.age ? `${userData.age} years old` : 'Not provided'}
+                                        </p>
+                                    )}
+                                </div>
+                                
+                                <div>
                                     <label className='block text-sm font-medium text-gray-700 mb-2'>Gender</label>
                                     {isEdit ? (
                                         <select 
@@ -438,21 +543,22 @@ const MyProfile = () => {
                                         </p>
                                     )}
                                 </div>
-                                
-                                <div>
-                                    <label className='block text-sm font-medium text-gray-700 mb-2'>Date of Birth</label>
+
+                                <div className="md:col-span-2">
+                                    <label className='block text-sm font-medium text-gray-700 mb-2'>Date of Birth (Optional)</label>
                                     {isEdit ? (
                                         <input 
-                                            className='w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary' 
+                                            className='w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary max-w-md' 
                                             type='date' 
                                             onChange={(e) => setUserData(prev => ({ ...prev, dob: e.target.value }))} 
                                             value={userData.dob} 
                                         />
                                     ) : (
-                                        <p className='p-3 text-gray-600 bg-gray-50 rounded-lg'>
+                                        <p className='p-3 text-gray-600 bg-gray-50 rounded-lg max-w-md'>
                                             {userData.dob || 'Not provided'}
                                         </p>
                                     )}
+                                    <p className="text-xs text-gray-500 mt-1">This is for your reference and will not be shared</p>
                                 </div>
                             </div>
                         </div>
